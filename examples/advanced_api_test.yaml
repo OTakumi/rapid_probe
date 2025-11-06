@@ -1,0 +1,73 @@
+name: "Advanced API Test Suite"
+description: "API testing with headers, variables, and assertions"
+base_url: "https://httpbin.org"
+
+tests:
+  - name: "Test with custom headers"
+    description: "Send request with custom headers"
+    request:
+      method: "GET"
+      url: "/headers"
+      headers:
+        X-Custom-Header: "TestValue"
+        User-Agent: "RapidProbe/1.0"
+        Accept: "application/json"
+    expectations:
+      status_code: 200
+
+  - name: "Test Basic Authentication"
+    description: "Test endpoint requiring basic auth"
+    request:
+      method: "GET"
+      url: "/basic-auth/{{username}}/{{password}}"
+      headers:
+        Authorization: "Basic dGVzdHVzZXI6dGVzdHBhc3M="
+    expectations:
+      status_code: 200
+    variables:
+      username: "testuser"
+      password: "testpass"
+
+  - name: "Test Bearer Token"
+    description: "Test with Bearer token authentication"
+    request:
+      method: "GET"
+      url: "/bearer"
+      headers:
+        Authorization: "Bearer {{api_token}}"
+    expectations:
+      status_code: 200
+    variables:
+      api_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test"
+
+  - name: "Test status code endpoint"
+    description: "Test specific status code response"
+    request:
+      method: "GET"
+      url: "/status/{{expected_status}}"
+    expectations:
+      status_code: 418
+    variables:
+      expected_status: "418"
+
+  - name: "Test response headers"
+    description: "Verify response headers"
+    request:
+      method: "GET"
+      url: "/response-headers?Content-Type=application/json&X-Custom=test"
+    expectations:
+      status_code: 200
+      headers:
+        Content-Type: "application/json"
+        X-Custom: "test"
+
+  - name: "Test with query parameters"
+    description: "Send request with multiple query parameters"
+    request:
+      method: "GET"
+      url: "/get?param1={{value1}}&param2={{value2}}&debug=true"
+    expectations:
+      status_code: 200
+    variables:
+      value1: "test"
+      value2: "123"
