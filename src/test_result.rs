@@ -53,7 +53,10 @@ impl TestResult {
     }
 
     pub fn finish(mut self) -> Self {
-        self.duration = Utc::now().signed_duration_since(self.started_at).to_std().unwrap_or_default();
+        self.duration = Utc::now()
+            .signed_duration_since(self.started_at)
+            .to_std()
+            .unwrap_or_default();
         self
     }
 }
@@ -65,7 +68,7 @@ mod tests {
     #[test]
     fn test_new_test_result_is_initially_passed() {
         let result = TestResult::new("test_api_endpoint".to_string());
-        
+
         assert_eq!(result.test_name, "test_api_endpoint");
         assert!(result.passed);
         assert_eq!(result.duration, Duration::default());
@@ -76,18 +79,17 @@ mod tests {
 
     #[test]
     fn test_with_error_marks_as_failed() {
-        let result = TestResult::new("test_api".to_string())
-            .with_error("Connection timeout".to_string());
-        
+        let result =
+            TestResult::new("test_api".to_string()).with_error("Connection timeout".to_string());
+
         assert!(!result.passed);
         assert_eq!(result.error_message, Some("Connection timeout".to_string()));
     }
 
     #[test]
     fn test_with_status_code() {
-        let result = TestResult::new("test_api".to_string())
-            .with_status_code(200);
-        
+        let result = TestResult::new("test_api".to_string()).with_status_code(200);
+
         assert_eq!(result.status_code, Some(200));
         assert!(result.passed);
     }
@@ -95,7 +97,7 @@ mod tests {
     #[test]
     fn test_add_passing_assertion() {
         let mut result = TestResult::new("test_api".to_string());
-        
+
         let assertion = AssertionResult {
             assertion_type: "status_code".to_string(),
             passed: true,
@@ -103,9 +105,9 @@ mod tests {
             actual: "200".to_string(),
             message: None,
         };
-        
+
         result.add_assertion(assertion);
-        
+
         assert!(result.passed);
         assert_eq!(result.assertions.len(), 1);
     }
@@ -113,7 +115,7 @@ mod tests {
     #[test]
     fn test_add_failing_assertion_marks_test_as_failed() {
         let mut result = TestResult::new("test_api".to_string());
-        
+
         let assertion = AssertionResult {
             assertion_type: "status_code".to_string(),
             passed: false,
@@ -121,9 +123,9 @@ mod tests {
             actual: "404".to_string(),
             message: Some("Expected status 200 but got 404".to_string()),
         };
-        
+
         result.add_assertion(assertion);
-        
+
         assert!(!result.passed);
         assert_eq!(result.assertions.len(), 1);
     }
@@ -131,19 +133,19 @@ mod tests {
     #[test]
     fn test_finish_calculates_duration() {
         let mut result = TestResult::new("test_api".to_string());
-        
+
         // 少し待つ
         std::thread::sleep(std::time::Duration::from_millis(10));
-        
+
         result = result.finish();
-        
+
         assert!(result.duration > Duration::from_millis(0));
     }
 
     #[test]
     fn test_multiple_assertions_with_one_failure() {
         let mut result = TestResult::new("test_api".to_string());
-        
+
         // 成功するアサーション
         result.add_assertion(AssertionResult {
             assertion_type: "status_code".to_string(),
@@ -152,7 +154,7 @@ mod tests {
             actual: "200".to_string(),
             message: None,
         });
-        
+
         // 失敗するアサーション
         result.add_assertion(AssertionResult {
             assertion_type: "header".to_string(),
@@ -161,7 +163,7 @@ mod tests {
             actual: "text/html".to_string(),
             message: Some("Content-Type mismatch".to_string()),
         });
-        
+
         assert!(!result.passed);
         assert_eq!(result.assertions.len(), 2);
     }
