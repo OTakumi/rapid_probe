@@ -19,12 +19,4 @@ async-trait = "0.1"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 mockall = "0.13"
 wiremock = "0.6"
-rusty-hook = "0.11"
-
-[hooks]
-pre-commit = "cargo fmt"
-pre-push = ["cargo check", "cargo test"]
-post-commit = "echo yay"
-
-[logging]
-verbose = true
+rusty-hook = "0.11.2"
