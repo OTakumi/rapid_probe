@@ -1,0 +1,36 @@
+name: "Simple API Test Suite"
+description: "Basic API endpoint testing"
+base_url: "https://jsonplaceholder.typicode.com"
+
+tests:
+  - name: "Get all posts"
+    description: "Retrieve a list of all posts"
+    request:
+      method: "GET"
+      url: "/posts"
+    expectations:
+      status_code: 200
+
+  - name: "Get single post"
+    description: "Retrieve a specific post by ID"
+    request:
+      method: "GET"
+      url: "/posts/1"
+    expectations:
+      status_code: 200
+
+  - name: "Get post with invalid ID"
+    description: "Try to retrieve a post that doesn't exist"
+    request:
+      method: "GET"
+      url: "/posts/999999"
+    expectations:
+      status_code: 404
+
+  - name: "Get posts for specific user"
+    description: "Filter posts by user ID"
+    request:
+      method: "GET"
+      url: "/posts?userId=1"
+    expectations:
+      status_code: 200
