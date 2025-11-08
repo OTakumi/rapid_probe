@@ -190,16 +190,16 @@ async fn execute_single_request(cli: &Cli, url: &str) -> Result<(), Box<dyn std:
     let (status, body) = match method.to_uppercase().as_str() {
         "GET" => client.get_with_headers(&path, headers).await?,
         "POST" => {
-            return Err(format!("HTTPメソッド 'POST' はまだサポートされていません").into());
+            return Err("HTTPメソッド 'POST' はまだサポートされていません".into());
         }
         "PUT" => {
-            return Err(format!("HTTPメソッド 'PUT' はまだサポートされていません").into());
+            return Err("HTTPメソッド 'PUT' はまだサポートされていません".into());
         }
         "DELETE" => {
-            return Err(format!("HTTPメソッド 'DELETE' はまだサポートされていません").into());
+            return Err("HTTPメソッド 'DELETE' はまだサポートされていません".into());
         }
         "PATCH" => {
-            return Err(format!("HTTPメソッド 'PATCH' はまだサポートされていません").into());
+            return Err("HTTPメソッド 'PATCH' はまだサポートされていません".into());
         }
         _ => {
             return Err(format!("不明なHTTPメソッド: '{}'", method).into());
