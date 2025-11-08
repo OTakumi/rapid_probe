@@ -1,32 +1,32 @@
-// use clap::Parser;
-// use rapid_probe::{ApiClient, HttpClient};
-// use serde::{Deserialize, Serialize};
-// use std::collections::HashMap;
-//
-// #[derive(Parser)]
-// #[command(name = "Rapid Probe")]
-// #[command(about = "汎用APIテストランナー")]
-// struct Cli {
-//     /// テストケースファイル
-//     #[arg(short, long)]
-//     test_case: Option<String>,
-//
-//     /// ベースURL
-//     #[arg(long)]
-//     base_url: Option<String>,
-//
-//     /// 認証トークン
-//     #[arg(long)]
-//     token: Option<String>,
-//
-//     /// レポート形式 (json)
-//     #[arg(long, default_value = "console")]
-//     report_format: String,
-//
-//     #[arg(short, long)]
-//     verbose: bool,
-// }
-//
+use clap::Parser;
+use rapid_probe::{ApiClient, HttpClient};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+
+#[derive(Parser)]
+#[command(name = "Rapid Probe")]
+#[command(about = "汎用APIテストランナー")]
+struct Cli {
+    /// テストケースファイル
+    #[arg(short, long)]
+    test_case: Option<String>,
+
+    /// ベースURL
+    #[arg(long)]
+    base_url: Option<String>,
+
+    /// 認証トークン
+    #[arg(long)]
+    token: Option<String>,
+
+    /// レポート形式 (json)
+    #[arg(long, default_value = "console")]
+    report_format: String,
+
+    #[arg(short, long)]
+    verbose: bool,
+}
+
 // #[derive(Deserialize)]
 // struct TestCase {
 //     name: String,
@@ -72,19 +72,27 @@
 // }
 
 #[tokio::main]
-async fn main() {
-    // let cli = Cli::parse();
-    //
-    // let runner = ApiTestRunner::new(&cli).await?;
-    // let results = runner.run().await?;
-    //
-    // runner.generate_report(&results, &cli.report_format).await?;
-    //
-    // // 失敗テストがある場合は非ゼロで終了
-    // if results.iter().any(|r| !r.passed) {
-    //     std::process::exit(1);
-    // }
-    //
-    // Ok(())
-    print!("Main");
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let cli = Cli::parse();
+
+    println!("Rapid Probe - 汎用APIテストランナー");
+
+    if cli.verbose {
+        println!("詳細モード: 有効");
+    }
+
+    if let Some(test_case) = &cli.test_case {
+        println!("テストケースファイル: {}", test_case);
+    }
+
+    if let Some(base_url) = &cli.base_url {
+        println!("ベースURL: {}", base_url);
+    }
+
+    println!("レポート形式: {}", cli.report_format);
+
+    // TODO: テストランナーの実装
+    println!("\nテスト実行機能は現在開発中です。");
+
+    Ok(())
 }
