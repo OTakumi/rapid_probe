@@ -1,6 +1,7 @@
 use clap::Parser;
-use rapid_probe::{ApiClient, HttpClient};
+use rapid_probe::{ApiClient, HttpClient, TestCaseLoader, TestRunner};
 use std::collections::HashMap;
+use std::path::Path;
 
 #[derive(Parser)]
 #[command(name = "Rapid Probe")]
@@ -111,8 +112,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         // テストケースモード
         (None, Some(test_case)) => {
-            println!("テストケースファイル: {}", test_case);
-            println!("テスト実行機能は現在開発中です。");
+            execute_test_case_file(&cli, test_case).await?;
         }
         // 両方指定された場合
         (Some(_), Some(_)) => {
@@ -218,6 +218,94 @@ async fn execute_single_request(cli: &Cli, url: &str) -> Result<(), Box<dyn std:
 
     if !cli.silent {
         println!("{}", body);
+    }
+
+    Ok(())
+}
+
+async fn execute_test_case_file(
+    cli: &Cli,
+    test_case_file: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if !cli.silent {
+        println!("テストケースファイルを読み込み中: {}", test_case_file);
+    }
+
+    // テストケースファイルのロード
+    let test_suite = TestCaseLoader::load_from_file(Path::new(test_case_file))?;
+
+    // ベースURLの決定（コマンドライン引数 > YAMLファイル）
+    let base_url = cli.base_url.as_ref()
+        .or(test_suite.base_url.as_ref())
+        .ok_or("ベースURLが指定されていません。--base-url オプションまたはYAMLファイルで指定してください。")?;
+
+    // APIクライアントの作成
+    let client = ApiClient::new(base_url)?;
+
+    // テストランナーの作成と実行
+    let runner = TestRunner::new(client);
+    let results = runner.run_test_suite(&test_suite, Some(base_url)).await;
+
+    // 結果のレポート
+    if !cli.silent {
+        println!("\n=== テスト結果 ===");
+        if let Some(name) = &test_suite.name {
+            println!("テストスイート: {}", name);
+        }
+        if let Some(desc) = &test_suite.description {
+            println!("説明: {}", desc);
+        }
+        println!();
+
+        let total = results.len();
+        let passed = results.iter().filter(|r| r.passed).count();
+        let failed = total - passed;
+
+        for result in &results {
+            let status = if result.passed {
+                "✓ PASS"
+            } else {
+                "✗ FAIL"
+            };
+            println!(
+                "{} {} ({}ms)",
+                status,
+                result.test_name,
+                result.duration.as_millis()
+            );
+
+            if cli.verbose {
+                // ステータスコードを表示
+                if let Some(status_code) = result.status_code {
+                    println!("  Status Code: {}", status_code);
+                }
+
+                // アサーション結果を表示
+                for assertion in &result.assertions {
+                    if !assertion.passed {
+                        println!(
+                            "  {} - Expected: {}, Actual: {}",
+                            assertion.assertion_type, assertion.expected, assertion.actual
+                        );
+                        if let Some(msg) = &assertion.message {
+                            println!("    {}", msg);
+                        }
+                    }
+                }
+
+                // エラーメッセージを表示
+                if let Some(err) = &result.error_message {
+                    println!("  Error: {}", err);
+                }
+            }
+        }
+
+        println!("\n合計: {} / 成功: {} / 失敗: {}", total, passed, failed);
+
+        // 失敗があった場合は非ゼロの終了コード
+        if failed > 0 {
+            std::process::exit(1);
+        }
     }
 
     Ok(())
