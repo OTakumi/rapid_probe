@@ -1,11 +1,6 @@
 pub mod get_handler;
 
-use crate::test_case::TestCase;
 use crate::test_result::{AssertionResult, TestResult};
-
-pub trait HttpMethodHandler {
-    async fn handle_request(&self, test_case: &TestCase, result: TestResult) -> TestResult;
-}
 
 pub fn validate_status_code(result: &mut TestResult, actual: u16, expected: u16) {
     if actual != expected {
