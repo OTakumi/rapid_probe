@@ -8,13 +8,13 @@ fn test_yaml_file_execution() {
     let yaml_content = r#"
 name: "Integration Test Suite"
 description: "Test for YAML execution"
-base_url: "https://httpbin.org"
+base_url: "https://jsonplaceholder.typicode.com"
 tests:
   - name: "Get Request Test"
     description: "Simple GET request"
     request:
       method: "GET"
-      url: "/get"
+      url: "/posts/1"
     expectations:
       status_code: 200
 "#;
@@ -45,18 +45,18 @@ tests:
 fn test_yaml_file_with_failing_test() {
     let yaml_content = r#"
 name: "Failing Test Suite"
-base_url: "https://httpbin.org"
+base_url: "https://jsonplaceholder.typicode.com"
 tests:
-  - name: "Expected 404 Test"
+  - name: "Expected 200 Test"
     request:
       method: "GET"
-      url: "/status/404"
+      url: "/posts/1"
     expectations:
-      status_code: 404
+      status_code: 200
   - name: "Expected 200 but get 404"
     request:
       method: "GET"
-      url: "/status/404"
+      url: "/posts/999"
     expectations:
       status_code: 200
 "#;
@@ -75,7 +75,7 @@ tests:
 
     // 失敗したテストがある場合、exitコードは1
     assert!(!output.status.success());
-    assert!(stdout.contains("✓ PASS Expected 404 Test"));
+    assert!(stdout.contains("✓ PASS Expected 200 Test"));
     assert!(stdout.contains("✗ FAIL Expected 200 but get 404"));
     assert!(stdout.contains("合計: 2 / 成功: 1 / 失敗: 1"));
 }
@@ -84,12 +84,12 @@ tests:
 fn test_yaml_file_verbose_mode() {
     let yaml_content = r#"
 name: "Verbose Mode Test"
-base_url: "https://httpbin.org"
+base_url: "https://jsonplaceholder.typicode.com"
 tests:
   - name: "Verbose Test"
     request:
       method: "GET"
-      url: "/get"
+      url: "/posts/1"
     expectations:
       status_code: 200
 "#;
@@ -118,7 +118,7 @@ tests:
   - name: "Test"
     request:
       method: "GET"
-      url: "/get"
+      url: "/posts/1"
     expectations:
       status_code: 200
 "#;
@@ -148,7 +148,7 @@ tests:
   - name: "Override Test"
     request:
       method: "GET"
-      url: "/get"
+      url: "/posts/1"
     expectations:
       status_code: 200
 "#;
@@ -164,12 +164,12 @@ tests:
             "-t",
             file.path().to_str().unwrap(),
             "--base-url",
-            "https://httpbin.org",
+            "https://jsonplaceholder.typicode.com",
         ])
         .output()
         .expect("Failed to execute command");
 
-    // httpbin.orgに向けてリクエストが送られるので成功する
+    // jsonplaceholder.typicode.comに向けてリクエストが送られるので成功する
     let stdout = String::from_utf8_lossy(&output.stdout);
 
     assert!(output.status.success());
