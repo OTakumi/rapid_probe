@@ -58,50 +58,6 @@ struct Cli {
     log_level: String,
 }
 
-// #[derive(Deserialize)]
-// struct TestCase {
-//     name: String,
-//     description: Option<String>,
-//     request: Request,
-//     expectations: Expectations,
-//     variables: Option<HashMap<String, String>>,
-// }
-//
-// #[derive(Deserialize)]
-// struct Request {
-//     method: String,
-//     url: String,
-//     headers: Option<HashMap<String, String>>,
-//     body_file: Option<String>,
-//     body: Option<serde_json::Value>,
-// }
-//
-// #[derive(Deserialize)]
-// struct Expectations {
-//     status_code: u16,
-//     headers: Option<HashMap<String, String>>,
-//     response: Option<ResponseExpectation>,
-//     performance: Option<PerformanceExpectation>,
-//     custom_assertions: Option<Vec<CustomAssertion>>,
-// }
-//
-// #[derive(Deserialize)]
-// struct ResponseExpectation {
-//     schema_file: Option<String>,
-//     expected_file: Option<String>,
-// }
-//
-// #[derive(Deserialize)]
-// struct PerformanceExpectation {
-//     max_response_time_ms: u64,
-// }
-//
-// #[derive(Deserialize)]
-// struct CustomAssertion {
-//     field: String,
-//     equals: serde_json::Value,
-// }
-
 /// ヘッダー名とヘッダー値のバリデーション
 ///
 /// CRLFインジェクション攻撃を防ぐため、改行文字を含むヘッダーを拒否
@@ -282,22 +238,11 @@ async fn execute_single_request(cli: &Cli, url: &str) -> Result<()> {
             .get_with_headers(&path, headers)
             .await
             .context("HTTP GET request failed")?,
-        "POST" => {
-            return Err(anyhow!("HTTPメソッド 'POST' はまだサポートされていません"));
-        }
-        "PUT" => {
-            return Err(anyhow!("HTTPメソッド 'PUT' はまだサポートされていません"));
-        }
-        "DELETE" => {
-            return Err(anyhow!(
-                "HTTPメソッド 'DELETE' はまだサポートされていません"
-            ));
-        }
-        "PATCH" => {
-            return Err(anyhow!("HTTPメソッド 'PATCH' はまだサポートされていません"));
+        "POST" | "PUT" | "DELETE" | "PATCH" => {
+            return Err(anyhow!("HTTP method '{}' is not supported yet", method));
         }
         _ => {
-            return Err(anyhow!("不明なHTTPメソッド: '{}'", method));
+            return Err(anyhow!("unknown HTTP method: '{}'", method));
         }
     };
 

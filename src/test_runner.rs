@@ -1,5 +1,6 @@
 use crate::api_client::HttpClient;
-use crate::http_methods::get_handler;
+use crate::http::StrategyFactory;
+use crate::http_methods::validate_status_code;
 use crate::test_case::{TestCase, TestSuite};
 use crate::test_result::TestResult;
 use tracing::{debug, info, instrument, warn};
@@ -70,14 +71,25 @@ impl<T: HttpClient> TestRunner<T> {
         let result = TestResult::new(test_case.name.clone());
 
         // HTTPリクエストの実行
-        let result = match test_case.request.method.to_uppercase().as_str() {
-            "GET" => get_handler::handle_get_request(&self.client, test_case, result).await,
-            _ => {
+        let result = match StrategyFactory::get_strategy(&test_case.request.method) {
+            Ok(strategy) => {
+                debug!("Using strategy for method: {}", strategy.method_name());
+                match strategy.execute(&self.client, test_case).await {
+                    Ok(response) => {
+                        let mut result = result.with_status_code(response.status_code);
+                        validate_status_code(
+                            &mut result,
+                            response.status_code,
+                            test_case.expectations.status_code,
+                        );
+                        result
+                    }
+                    Err(e) => result.with_error(e.to_string()),
+                }
+            }
+            Err(e) => {
                 warn!("Unsupported HTTP method: {}", test_case.request.method);
-                result.with_error(format!(
-                    "HTTP method '{}' is not supported yet",
-                    test_case.request.method
-                ))
+                result.with_error(e.to_string())
             }
         };
 
