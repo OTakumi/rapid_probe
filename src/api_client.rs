@@ -134,7 +134,7 @@ impl HttpClient for ApiClient {
         debug!("Request headers: {:?}", headers);
 
         // headerをリクエストに適用する
-        let mut request_builder = self.client.get(full_url.clone());
+        let mut request_builder = self.client.get(full_url);
 
         for (k, v) in headers {
             request_builder = request_builder.header(k, v);
