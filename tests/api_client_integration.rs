@@ -21,8 +21,8 @@ async fn test_api_client_get_with_headers_success() {
         .mount(&server)
         .await;
 
-    // テスト対象をインスタンス化
-    let client = ApiClient::new(&server.uri()).expect("Failed to create client");
+    // テスト対象をインスタンス化（テスト用コンストラクタを使用）
+    let client = ApiClient::new_for_testing(&server.uri()).expect("Failed to create client");
 
     // テスト用のヘッダーを準備
     let mut headers = HashMap::new();
@@ -52,8 +52,8 @@ async fn test_api_client_handles_404_not_found() {
         .mount(&server)
         .await;
 
-    // クライアント作成
-    let client = ApiClient::new(&server.uri()).unwrap();
+    // クライアント作成（テスト用コンストラクタを使用）
+    let client = ApiClient::new_for_testing(&server.uri()).unwrap();
 
     // 実行
     let result = client

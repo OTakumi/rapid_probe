@@ -30,6 +30,19 @@ pub struct ApiClient {
 
 impl ApiClient {
     pub fn new(base_url_str: &str) -> Result<Self> {
+        Self::new_internal(base_url_str, true)
+    }
+
+    /// テスト用のコンストラクタ（URL検証をスキップ）
+    ///
+    /// 統合テストでlocalhostを使用する場合に使用します。
+    /// 本番環境では使用しないでください。
+    #[doc(hidden)]
+    pub fn new_for_testing(base_url_str: &str) -> Result<Self> {
+        Self::new_internal(base_url_str, false)
+    }
+
+    fn new_internal(base_url_str: &str, validate: bool) -> Result<Self> {
         debug!("Creating API client with base URL: {}", base_url_str);
 
         // 文字列をUrlオブジェクトにパース
@@ -37,15 +50,10 @@ impl ApiClient {
             .with_context(|| format!("invalid base URL: {}", base_url_str))?;
 
         // URL検証: SSRF攻撃を防ぐ
-        // テスト時は環境変数 RAPID_PROBE_ALLOW_LOCALHOST=1 で無効化可能
-        let skip_validation = std::env::var("RAPID_PROBE_ALLOW_LOCALHOST")
-            .map(|v| v == "1" || v.to_lowercase() == "true")
-            .unwrap_or(false);
-
-        if !skip_validation {
+        if validate {
             Self::validate_url(&base_url)?;
         } else {
-            debug!("URL validation skipped (RAPID_PROBE_ALLOW_LOCALHOST is set)");
+            debug!("URL validation skipped (testing mode)");
         }
 
         // タイムアウト設定でHTTPクライアントを構築
