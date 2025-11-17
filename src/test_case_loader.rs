@@ -11,7 +11,7 @@ impl TestCaseLoader {
             .with_context(|| format!("failed to read file: {}", file_path.display()))?;
 
         let test_suite: TestSuite =
-            serde_yaml::from_str(&content).context("failed to parse YAML")?;
+            serde_yml::from_str(&content).context("failed to parse YAML")?;
 
         Ok(test_suite)
     }
