@@ -1,3 +1,4 @@
+use anyhow::{Context, Result, anyhow};
 use clap::Parser;
 use rapid_probe::{ApiClient, HttpClient, TestCaseLoader, TestRunner};
 use std::collections::HashMap;
@@ -96,7 +97,7 @@ struct Cli {
 // }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     // サイレントモードでない場合のみ表示
@@ -116,27 +117,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         // 両方指定された場合
         (Some(_), Some(_)) => {
-            eprintln!("エラー: URLとテストケースファイルの両方を同時に指定することはできません。");
-            std::process::exit(1);
+            return Err(anyhow!(
+                "URLとテストケースファイルの両方を同時に指定することはできません"
+            ));
         }
         // どちらも指定されていない場合
         (None, None) => {
-            eprintln!("URLまたはテストケースファイルを指定してください。");
-            eprintln!("使用方法: rapid_probe <URL> または rapid_probe -t <test-case-file>");
-            std::process::exit(1);
+            return Err(anyhow!(
+                "URLまたはテストケースファイルを指定してください\n使用方法: rapid_probe <URL> または rapid_probe -t <test-case-file>"
+            ));
         }
     }
 
     Ok(())
 }
 
-async fn execute_single_request(cli: &Cli, url: &str) -> Result<(), Box<dyn std::error::Error>> {
+async fn execute_single_request(cli: &Cli, url: &str) -> Result<()> {
     // URLの解析
     let (base_url, path) = match url {
         // フルURLが指定された場合
         url if url.starts_with("http://") || url.starts_with("https://") => {
-            let parsed = url::Url::parse(url)?;
-            let base = format!("{}://{}", parsed.scheme(), parsed.host_str().unwrap_or(""));
+            let parsed = url::Url::parse(url).with_context(|| format!("invalid URL: {}", url))?;
+            let host = parsed
+                .host_str()
+                .ok_or_else(|| anyhow!("URL has no host: {}", url))?;
+            let base = format!("{}://{}", parsed.scheme(), host);
             let path = parsed.path().to_string()
                 + &parsed
                     .query()
@@ -148,13 +153,15 @@ async fn execute_single_request(cli: &Cli, url: &str) -> Result<(), Box<dyn std:
         relative_path => match &cli.base_url {
             Some(base) => (base.clone(), relative_path.to_string()),
             None => {
-                return Err("相対URLが指定されましたが、--base-urlが設定されていません".into());
+                return Err(anyhow!(
+                    "相対URLが指定されましたが、--base-urlが設定されていません"
+                ));
             }
         },
     };
 
     // APIクライアントの作成
-    let client = ApiClient::new(&base_url)?;
+    let client = ApiClient::new(&base_url).context("failed to create API client")?;
 
     // ヘッダーの準備
     let mut headers = HashMap::new();
@@ -188,21 +195,26 @@ async fn execute_single_request(cli: &Cli, url: &str) -> Result<(), Box<dyn std:
     let method = cli.request.as_deref().unwrap_or("GET");
 
     let (status, body) = match method.to_uppercase().as_str() {
-        "GET" => client.get_with_headers(&path, headers).await?,
+        "GET" => client
+            .get_with_headers(&path, headers)
+            .await
+            .context("HTTP GET request failed")?,
         "POST" => {
-            return Err("HTTPメソッド 'POST' はまだサポートされていません".into());
+            return Err(anyhow!("HTTPメソッド 'POST' はまだサポートされていません"));
         }
         "PUT" => {
-            return Err("HTTPメソッド 'PUT' はまだサポートされていません".into());
+            return Err(anyhow!("HTTPメソッド 'PUT' はまだサポートされていません"));
         }
         "DELETE" => {
-            return Err("HTTPメソッド 'DELETE' はまだサポートされていません".into());
+            return Err(anyhow!(
+                "HTTPメソッド 'DELETE' はまだサポートされていません"
+            ));
         }
         "PATCH" => {
-            return Err("HTTPメソッド 'PATCH' はまだサポートされていません".into());
+            return Err(anyhow!("HTTPメソッド 'PATCH' はまだサポートされていません"));
         }
         _ => {
-            return Err(format!("不明なHTTPメソッド: '{}'", method).into());
+            return Err(anyhow!("不明なHTTPメソッド: '{}'", method));
         }
     };
 
@@ -223,24 +235,22 @@ async fn execute_single_request(cli: &Cli, url: &str) -> Result<(), Box<dyn std:
     Ok(())
 }
 
-async fn execute_test_case_file(
-    cli: &Cli,
-    test_case_file: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
+async fn execute_test_case_file(cli: &Cli, test_case_file: &str) -> Result<()> {
     if !cli.silent {
         println!("テストケースファイルを読み込み中: {}", test_case_file);
     }
 
     // テストケースファイルのロード
-    let test_suite = TestCaseLoader::load_from_file(Path::new(test_case_file))?;
+    let test_suite = TestCaseLoader::load_from_file(Path::new(test_case_file))
+        .with_context(|| format!("failed to load test file: {}", test_case_file))?;
 
     // ベースURLの決定（コマンドライン引数 > YAMLファイル）
     let base_url = cli.base_url.as_ref()
         .or(test_suite.base_url.as_ref())
-        .ok_or("ベースURLが指定されていません。--base-url オプションまたはYAMLファイルで指定してください。")?;
+        .ok_or_else(|| anyhow!("ベースURLが指定されていません。--base-url オプションまたはYAMLファイルで指定してください。"))?;
 
     // APIクライアントの作成
-    let client = ApiClient::new(base_url)?;
+    let client = ApiClient::new(base_url).context("failed to create API client")?;
 
     // テストランナーの作成と実行
     let runner = TestRunner::new(client);

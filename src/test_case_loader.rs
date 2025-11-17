@@ -1,13 +1,18 @@
 use crate::test_case::TestSuite;
+use anyhow::{Context, Result};
 use std::fs;
 use std::path::Path;
 
 pub struct TestCaseLoader;
 
 impl TestCaseLoader {
-    pub fn load_from_file(file_path: &Path) -> Result<TestSuite, Box<dyn std::error::Error>> {
-        let content = fs::read_to_string(file_path)?;
-        let test_suite: TestSuite = serde_yaml::from_str(&content)?;
+    pub fn load_from_file(file_path: &Path) -> Result<TestSuite> {
+        let content = fs::read_to_string(file_path)
+            .with_context(|| format!("failed to read file: {}", file_path.display()))?;
+
+        let test_suite: TestSuite =
+            serde_yaml::from_str(&content).context("failed to parse YAML")?;
+
         Ok(test_suite)
     }
 }

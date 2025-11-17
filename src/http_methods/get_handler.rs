@@ -34,6 +34,7 @@ mod tests {
     use crate::api_client::MockHttpClient;
     use crate::test_case::{Expectations, Request};
     use crate::test_result::TestResult;
+    use anyhow::anyhow;
     use std::collections::HashMap;
 
     #[tokio::test]
@@ -197,7 +198,7 @@ mod tests {
             .expect_get_with_headers()
             .withf(|url, _| url == "/error")
             .times(1)
-            .returning(|_, _| Err("Connection timeout".into()));
+            .returning(|_, _| Err(anyhow!("Connection timeout")));
 
         let result = TestResult::new(test_case.name.clone());
 
