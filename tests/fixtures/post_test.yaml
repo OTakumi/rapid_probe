@@ -1,0 +1,39 @@
+name: POST Method Tests
+description: Testing POST requests with various scenarios
+base_url: https://jsonplaceholder.typicode.com
+
+tests:
+  - name: Create a new post
+    description: Test creating a new post with JSON body
+    request:
+      method: POST
+      url: /posts
+      headers:
+        Content-Type: application/json
+      body:
+        title: "Test Post"
+        body: "This is a test post content"
+        userId: 1
+    expectations:
+      status_code: 201
+
+  - name: Create post with minimal data
+    description: Test creating a post with only required fields
+    request:
+      method: POST
+      url: /posts
+      headers:
+        Content-Type: application/json
+      body:
+        title: "Minimal"
+        userId: 1
+    expectations:
+      status_code: 201
+
+  - name: Create post with empty body
+    description: Test POST request with empty body
+    request:
+      method: POST
+      url: /posts
+    expectations:
+      status_code: 201
