@@ -1,0 +1,36 @@
+# Rapid Probe プロジェクト設定ファイル
+#
+# このファイルには、プロジェクト全体で使用される共通設定を定義します。
+
+# ベースURL（テスト対象のAPIのルートURL）
+base_url: "https://api.example.com"
+
+# 認証設定
+auth:
+  # Bearer トークン認証（使用する場合はコメントアウトを外してください）
+  # token: "your-api-token-here"
+
+  # APIキー認証（使用する場合はコメントアウトを外してください）
+  # api_key:
+  #   header_name: "X-API-Key"
+  #   value: "your-api-key-here"
+
+# タイムアウト設定（秒単位）
+timeout:
+  # 接続タイムアウト
+  connect: 10
+  # 全体タイムアウト
+  total: 30
+
+# 並列実行設定
+parallel:
+  # 並列実行を有効にする（true/false）
+  enabled: false
+  # 最大並列数（enabledがtrueの場合のみ有効）
+  max_workers: 4
+
+# 今後追加予定の設定:
+# リトライ設定
+# retry:
+#   max_attempts: 3
+#   backoff: exponential

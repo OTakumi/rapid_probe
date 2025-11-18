@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Context, Result};
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use rapid_probe::{ApiClient, HttpClient, TestCaseLoader, TestRunner};
 use std::collections::HashMap;
 use std::path::Path;
@@ -10,6 +10,9 @@ use tracing_subscriber::{fmt, EnvFilter};
 #[command(name = "Rapid Probe")]
 #[command(about = "汎用APIテストランナー")]
 struct Cli {
+    #[command(subcommand)]
+    command: Option<Commands>,
+
     /// URL
     url: Option<String>,
 
@@ -56,6 +59,12 @@ struct Cli {
     /// ログレベル (trace, debug, info, warn, error)
     #[arg(long = "log-level", default_value = "info")]
     log_level: String,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// プロジェクトディレクトリを初期化
+    Init,
 }
 
 /// ヘッダー名とヘッダー値のバリデーション
@@ -132,6 +141,16 @@ async fn main() -> Result<()> {
         cli.verbose, cli.silent, cli.log_level
     );
 
+    // サブコマンドの処理
+    if let Some(command) = &cli.command {
+        match command {
+            Commands::Init => {
+                execute_init()?;
+                return Ok(());
+            }
+        }
+    }
+
     // 実行モードの判定
     match (&cli.url, &cli.test_case) {
         // 単一URLリクエストモード
@@ -157,6 +176,10 @@ async fn main() -> Result<()> {
     }
 
     Ok(())
+}
+
+fn execute_init() -> Result<()> {
+    rapid_probe::init::execute()
 }
 
 async fn execute_single_request(cli: &Cli, url: &str) -> Result<()> {
