@@ -9,7 +9,7 @@ use std::collections::HashMap;
 ///
 /// # Arguments
 ///
-/// * `base_url` - ベースURL（通常はWireMockサーバーのURI）
+/// * `base_url` - ベースURL（外部APIまたはテストサーバーのURI）
 ///
 /// # Returns
 ///

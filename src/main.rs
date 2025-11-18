@@ -100,7 +100,7 @@ fn init_logging(log_level: &str, silent: bool) -> Result<()> {
     // 環境変数RUST_LOGが設定されている場合はそれを優先
     let filter = EnvFilter::try_from_default_env()
         .or_else(|_| EnvFilter::try_new(log_level))
-        .context("invalid log level")?;
+        .with_context(|| format!("invalid log level: {}", log_level))?;
 
     // ログフォーマットの設定
     fmt()
