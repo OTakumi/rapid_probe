@@ -1,0 +1,58 @@
+# Rapid Probe テストケース例
+#
+# このファイルは、テストケースの書き方の参考として使用してください。
+# 実際のテストを作成する場合は、URLやパラメータを適切に変更してください。
+
+name: "Example API Test Suite"
+description: "サンプルテストケース集"
+
+# ベースURL（config.yamlで設定した値を上書きする場合のみ指定）
+# base_url: "https://api.example.com"
+
+tests:
+  # GETリクエストの例
+  - name: "Get User by ID"
+    description: "ユーザー情報を取得するテスト"
+    request:
+      method: "GET"
+      url: "/users/1"
+      headers:
+        Accept: "application/json"
+    expectations:
+      status_code: 200
+
+  # POSTリクエストの例（JSONボディ）
+  - name: "Create New User"
+    description: "新規ユーザーを作成するテスト"
+    request:
+      method: "POST"
+      url: "/users"
+      headers:
+        Content-Type: "application/json"
+      body:
+        name: "John Doe"
+        email: "john.doe@example.com"
+        role: "user"
+    expectations:
+      status_code: 201
+
+  # ヘッダーを含むGETリクエストの例
+  - name: "Get Protected Resource"
+    description: "認証が必要なリソースを取得するテスト"
+    request:
+      method: "GET"
+      url: "/protected/resource"
+      headers:
+        Authorization: "Bearer ${API_TOKEN}"
+        Accept: "application/json"
+    expectations:
+      status_code: 200
+
+  # 404エラーのテスト例
+  - name: "Get Non-Existent Resource"
+    description: "存在しないリソースへのアクセステスト"
+    request:
+      method: "GET"
+      url: "/users/99999"
+    expectations:
+      status_code: 404
