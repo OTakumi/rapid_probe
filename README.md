@@ -208,5 +208,5 @@ cargo fmt
 cargo run -- https://jsonplaceholder.typicode.com/posts/1
 
 # YAMLテストケースで実行
-cargo run -- -t examples/test.yaml -v
+cargo run -- -t examples/simple_api_test.yaml -v
 ```
