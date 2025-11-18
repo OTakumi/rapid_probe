@@ -34,9 +34,11 @@ impl StrategyFactory {
     /// 指定されたHTTPメソッドに対応するStrategyを取得
     pub fn get_strategy(method: &str) -> Result<Box<dyn HttpMethodStrategy>> {
         use crate::http::get_strategy::GetStrategy;
+        use crate::http::post_strategy::PostStrategy;
 
         match method.to_uppercase().as_str() {
             "GET" => Ok(Box::new(GetStrategy)),
+            "POST" => Ok(Box::new(PostStrategy)),
             _ => anyhow::bail!("HTTP method '{}' is not supported yet", method),
         }
     }
@@ -69,18 +71,25 @@ mod tests {
     }
 
     #[test]
-    fn test_strategy_factory_returns_error_for_unsupported_method() {
+    fn test_strategy_factory_returns_post_strategy_uppercase() {
         // Arrange & Act
         let result = StrategyFactory::get_strategy("POST");
 
         // Assert
-        assert!(result.is_err(), "未サポートのメソッドに対してErrを返すべき");
-        let err_msg = result.unwrap_err().to_string();
-        assert!(
-            err_msg.contains("not supported") || err_msg.contains("not implemented"),
-            "エラーメッセージに未サポートの旨を含むべき: {}",
-            err_msg
-        );
+        assert!(result.is_ok(), "POSTメソッドに対してOkを返すべき");
+        let strategy = result.unwrap();
+        assert_eq!(strategy.method_name(), "POST");
+    }
+
+    #[test]
+    fn test_strategy_factory_returns_post_strategy_lowercase() {
+        // Arrange & Act
+        let result = StrategyFactory::get_strategy("post");
+
+        // Assert
+        assert!(result.is_ok(), "小文字のpostメソッドに対してOkを返すべき");
+        let strategy = result.unwrap();
+        assert_eq!(strategy.method_name(), "POST");
     }
 
     #[test]
