@@ -15,7 +15,7 @@ const EXAMPLE_TEST_FILE: &str = "example.yaml";
 const CONFIG_TEMPLATE: &str = include_str!("../templates/config.yaml");
 const EXAMPLE_TEST_TEMPLATE: &str = include_str!("../templates/example.yaml");
 
-/// プロジェクトディレクトリを初期化
+/// プロジェクトディレクトリを初期化（カレントディレクトリ）
 ///
 /// カレントディレクトリに`rapid_probe`ディレクトリを作成し、
 /// 必要なファイルとディレクトリを生成します。
@@ -29,16 +29,38 @@ const EXAMPLE_TEST_TEMPLATE: &str = include_str!("../templates/example.yaml");
 /// - ディレクトリが既に存在する場合
 /// - ファイルの作成に失敗した場合
 pub fn initialize_project() -> Result<()> {
-    let project_path = Path::new(PROJECT_DIR);
+    let current_dir = std::env::current_dir().context("カレントディレクトリの取得に失敗しました")?;
+    initialize_project_at(&current_dir)
+}
+
+/// プロジェクトディレクトリを初期化（指定されたパス）
+///
+/// 指定されたベースパスに`rapid_probe`ディレクトリを作成し、
+/// 必要なファイルとディレクトリを生成します。
+///
+/// # Arguments
+///
+/// * `base_path` - プロジェクトディレクトリを作成する親ディレクトリのパス
+///
+/// # Returns
+///
+/// 成功した場合は`Ok(())`、失敗した場合はエラーを返します。
+///
+/// # Errors
+///
+/// - ディレクトリが既に存在する場合
+/// - ファイルの作成に失敗した場合
+pub fn initialize_project_at(base_path: &Path) -> Result<()> {
+    let project_path = base_path.join(PROJECT_DIR);
 
     // ディレクトリが既に存在する場合はエラー
-    validate_project_directory(project_path)?;
+    validate_project_directory(&project_path)?;
 
     println!("Rapid Probe プロジェクトを初期化しています...\n");
 
     // プロジェクト構造の作成
-    create_directories(project_path)?;
-    create_files(project_path)?;
+    create_directories(&project_path)?;
+    create_files(&project_path)?;
 
     print_success_message();
 
@@ -142,57 +164,41 @@ mod tests {
 
     #[test]
     fn test_initialize_project_creates_directory_structure() {
-        // Arrange
-        // 一時ディレクトリを作成
+        // Arrange: 一時ディレクトリを作成
         let temp_dir = TempDir::new().unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&temp_dir).unwrap();
 
-        // Act
-        // プロジェクトを初期化
-        let result = initialize_project();
+        // Act: プロジェクトを初期化
+        let result = initialize_project_at(temp_dir.path());
 
-        // Assert
-        // 成功すること
+        // Assert: 成功すること
         assert!(result.is_ok());
 
+        let project_path = temp_dir.path().join(PROJECT_DIR);
+
         // ディレクトリが作成されていること
-        assert!(Path::new(PROJECT_DIR).exists());
-        assert!(Path::new(PROJECT_DIR).join(TESTS_DIR).exists());
+        assert!(project_path.exists());
+        assert!(project_path.join(TESTS_DIR).exists());
 
         // ファイルが作成されていること
-        assert!(Path::new(PROJECT_DIR).join(CONFIG_FILE).exists());
-        assert!(Path::new(PROJECT_DIR)
-            .join(TESTS_DIR)
-            .join(EXAMPLE_TEST_FILE)
-            .exists());
-
-        // Cleanup
-        std::env::set_current_dir(original_dir).unwrap();
+        assert!(project_path.join(CONFIG_FILE).exists());
+        assert!(project_path.join(TESTS_DIR).join(EXAMPLE_TEST_FILE).exists());
     }
 
     #[test]
     fn test_initialize_project_fails_if_directory_exists() {
-        // Arrange
-        // 一時ディレクトリを作成
+        // Arrange: 一時ディレクトリを作成
         let temp_dir = TempDir::new().unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&temp_dir).unwrap();
 
-        // 既にディレクトリを作成
-        fs::create_dir(PROJECT_DIR).unwrap();
+        // 既にプロジェクトディレクトリを作成
+        let project_path = temp_dir.path().join(PROJECT_DIR);
+        fs::create_dir(&project_path).unwrap();
 
-        // Act
-        // プロジェクトを初期化
-        let result = initialize_project();
+        // Act: プロジェクトを初期化（既に存在するディレクトリに対して）
+        let result = initialize_project_at(temp_dir.path());
 
-        // Assert
-        // エラーが返されること
+        // Assert: エラーが返されること
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("既に存在します"));
-
-        // Cleanup
-        std::env::set_current_dir(original_dir).unwrap();
     }
 
     #[test]
