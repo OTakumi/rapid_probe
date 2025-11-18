@@ -29,7 +29,8 @@ const EXAMPLE_TEST_TEMPLATE: &str = include_str!("../templates/example.yaml");
 /// - ディレクトリが既に存在する場合
 /// - ファイルの作成に失敗した場合
 pub fn initialize_project() -> Result<()> {
-    let current_dir = std::env::current_dir().context("カレントディレクトリの取得に失敗しました")?;
+    let current_dir =
+        std::env::current_dir().context("カレントディレクトリの取得に失敗しました")?;
     initialize_project_at(&current_dir)
 }
 
@@ -181,7 +182,10 @@ mod tests {
 
         // ファイルが作成されていること
         assert!(project_path.join(CONFIG_FILE).exists());
-        assert!(project_path.join(TESTS_DIR).join(EXAMPLE_TEST_FILE).exists());
+        assert!(project_path
+            .join(TESTS_DIR)
+            .join(EXAMPLE_TEST_FILE)
+            .exists());
     }
 
     #[test]
