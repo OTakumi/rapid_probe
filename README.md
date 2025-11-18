@@ -5,6 +5,51 @@
 Rapid Probeは、APIのE2Eテストを自動化するための汎用的なテストツールです。<br />
 curlライクなインターフェースを提供し、単一のAPIリクエストから複雑なテストシナリオまで対応できます。
 
+## インストール
+
+### 必要な環境
+
+- Rust 1.70以上
+
+### ソースからビルド
+
+```bash
+# リポジトリをクローン
+git clone https://github.com/yourusername/rapid_probe.git
+cd rapid_probe
+
+# リリースビルド
+cargo build --release
+
+# バイナリを確認
+./target/release/rapid_probe --help
+```
+
+### パスを通す（オプション）
+
+ビルドしたバイナリを任意の場所で使用できるようにします：
+
+```bash
+# macOS / Linux
+sudo cp target/release/rapid_probe /usr/local/bin/
+
+# または、ホームディレクトリの bin/ に配置
+mkdir -p ~/bin
+cp target/release/rapid_probe ~/bin/
+# ~/.bashrc または ~/.zshrc に以下を追加
+# export PATH="$HOME/bin:$PATH"
+
+# Windows (PowerShell)
+# C:\Program Files\rapid_probe\ などに配置し、環境変数 PATH に追加
+```
+
+### 動作確認
+
+```bash
+rapid_probe --help
+rapid_probe https://jsonplaceholder.typicode.com/posts/1
+```
+
 ## 使い方
 
 ### 基本的な使用方法
