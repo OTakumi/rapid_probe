@@ -21,6 +21,13 @@ pub trait HttpClient: Send + Sync {
         url: &str,
         headers: HashMap<String, String>,
     ) -> Result<(u16, String)>;
+
+    async fn post_with_body(
+        &self,
+        url: &str,
+        headers: HashMap<String, String>,
+        body: String,
+    ) -> Result<(u16, String)>;
 }
 
 pub struct ApiClient {
@@ -166,5 +173,82 @@ impl HttpClient for ApiClient {
         debug!("Response body length: {} bytes", body.len());
 
         Ok((status, body))
+    }
+
+    #[instrument(skip(self, headers, body), fields(url = %url, header_count = headers.len(), body_len = body.len()))]
+    async fn post_with_body(
+        &self,
+        url: &str,
+        headers: HashMap<String, String>,
+        body: String,
+    ) -> Result<(u16, String)> {
+        debug!("Starting POST request to: {}", url);
+
+        // urlを結合する
+        let full_url = self.base_url.join(url).with_context(|| {
+            format!(
+                "failed to build URL from base {} and path {}",
+                self.base_url, url
+            )
+        })?;
+
+        debug!("Full URL: {}", full_url);
+        debug!("Request headers: {:?}", headers);
+        debug!("Request body length: {} bytes", body.len());
+
+        // headerをリクエストに適用する
+        let mut request_builder = self.client.post(full_url);
+
+        for (k, v) in headers {
+            request_builder = request_builder.header(k, v);
+        }
+
+        // bodyを設定
+        request_builder = request_builder.body(body);
+
+        // リクエストし、レスポンスを受け取る
+        let response = request_builder
+            .send()
+            .await
+            .context("HTTP request failed")?;
+
+        // レスポンスの内容を分解する
+        let status = response.status().as_u16();
+        info!("Received response with status: {}", status);
+
+        let response_body = response
+            .text()
+            .await
+            .context("failed to read response body")?;
+
+        debug!("Response body length: {} bytes", response_body.len());
+
+        Ok((status, response_body))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_api_client_post_with_body_basic() {
+        // Arrange
+        let client = ApiClient::new("https://jsonplaceholder.typicode.com").unwrap();
+        let mut headers = HashMap::new();
+        headers.insert("Content-Type".to_string(), "application/json".to_string());
+        let body = r#"{"title": "test", "body": "content", "userId": 1}"#.to_string();
+
+        // Act
+        let result = client.post_with_body("/posts", headers, body).await;
+
+        // Assert
+        assert!(result.is_ok(), "POSTリクエストが成功すべき");
+        let (status, response_body) = result.unwrap();
+        assert!(
+            status >= 200 && status < 300,
+            "ステータスコードが2xxであるべき"
+        );
+        assert!(!response_body.is_empty(), "レスポンスボディが空でないべき");
     }
 }

@@ -238,7 +238,14 @@ async fn execute_single_request(cli: &Cli, url: &str) -> Result<()> {
             .get_with_headers(&path, headers)
             .await
             .context("HTTP GET request failed")?,
-        "POST" | "PUT" | "DELETE" | "PATCH" => {
+        "POST" => {
+            let request_body = cli.data.as_deref().unwrap_or("");
+            client
+                .post_with_body(&path, headers, request_body.to_string())
+                .await
+                .context("HTTP POST request failed")?
+        }
+        "PUT" | "DELETE" | "PATCH" => {
             return Err(anyhow!("HTTP method '{}' is not supported yet", method));
         }
         _ => {

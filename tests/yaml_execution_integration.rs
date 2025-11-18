@@ -175,3 +175,45 @@ tests:
     assert!(output.status.success());
     assert!(stdout.contains("✓ PASS Override Test"));
 }
+
+#[test]
+fn test_yaml_file_post_request() {
+    let yaml_content = r#"
+name: "POST Method Test"
+description: "Test POST requests"
+base_url: "https://jsonplaceholder.typicode.com"
+tests:
+  - name: "Create Post"
+    request:
+      method: "POST"
+      url: "/posts"
+      headers:
+        Content-Type: "application/json"
+      body:
+        title: "Test Title"
+        body: "Test Content"
+        userId: 1
+    expectations:
+      status_code: 201
+"#;
+
+    let mut file = NamedTempFile::new().unwrap();
+    write!(file, "{}", yaml_content).unwrap();
+
+    // コマンドの実行
+    let output = Command::new("cargo")
+        .args(&["run", "--", "-t", file.path().to_str().unwrap()])
+        .output()
+        .expect("Failed to execute command");
+
+    // 結果の検証
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    println!("stdout: {}", stdout);
+    println!("stderr: {}", stderr);
+
+    assert!(output.status.success());
+    assert!(stdout.contains("✓ PASS Create Post"));
+    assert!(stdout.contains("合計: 1 / 成功: 1 / 失敗: 0"));
+}

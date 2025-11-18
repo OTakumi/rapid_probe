@@ -191,14 +191,14 @@ mod tests {
             name: "Unsupported Method Test".to_string(),
             description: None,
             request: Request {
-                method: "POST".to_string(),
-                url: "/users".to_string(),
+                method: "DELETE".to_string(),
+                url: "/users/1".to_string(),
                 headers: None,
                 body_file: None,
                 body: None,
             },
             expectations: Expectations {
-                status_code: 201,
+                status_code: 204,
                 headers: None,
                 response: None,
                 performance: None,
