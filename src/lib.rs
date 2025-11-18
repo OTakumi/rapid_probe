@@ -1,6 +1,7 @@
 pub mod api_client;
 pub mod http;
 pub mod http_methods;
+pub mod ssrf_protection;
 pub mod test_case;
 pub mod test_case_loader;
 pub mod test_result;
