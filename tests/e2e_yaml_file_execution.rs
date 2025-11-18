@@ -1,10 +1,36 @@
+//! E2Eテスト：YAMLファイル実行テスト
+//!
+//! このモジュールは、Rapid Probeの完全なE2Eテストを提供します。
+//! cargo runサブプロセスを使用して、実際のCLI動作を検証します。
+//!
+//! # テスト方針
+//!
+//! - 実際のバイナリを実行してCLI全体の動作を検証
+//! - YAMLファイルベースのテスト実行を確認
+//! - 標準出力・標準エラー出力の検証
+//! - 終了コードの検証
+
 use std::io::Write;
 use std::process::Command;
 use tempfile::NamedTempFile;
 
+/// YAMLファイルからテストケースを実行できることをテスト
+///
+/// # テスト内容
+///
+/// - YAMLファイルに定義されたGETリクエストのテストケースを実行
+/// - JSONPlaceholder APIに対して実際のリクエストを送信
+/// - コマンドライン引数でYAMLファイルを指定
+///
+/// # 検証項目
+///
+/// - コマンドが正常終了すること（exit code 0）
+/// - 標準出力に「テストケースファイルを読み込み中」が含まれること
+/// - 標準出力に「✓ PASS」が含まれること
+/// - テスト結果サマリーが正しく表示されること（合計1、成功1、失敗0）
 #[test]
 fn test_yaml_file_execution() {
-    // YAMLテストファイルの作成
+    // Arrange: YAMLテストファイルの作成
     let yaml_content = r#"
 name: "Integration Test Suite"
 description: "Test for YAML execution"
@@ -22,13 +48,13 @@ tests:
     let mut file = NamedTempFile::new().unwrap();
     write!(file, "{}", yaml_content).unwrap();
 
-    // コマンドの実行
+    // Act: コマンドの実行
     let output = Command::new("cargo")
         .args(&["run", "--", "-t", file.path().to_str().unwrap()])
         .output()
         .expect("Failed to execute command");
 
-    // 結果の検証
+    // Assert: 結果の検証
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
 
@@ -41,8 +67,22 @@ tests:
     assert!(stdout.contains("合計: 1 / 成功: 1 / 失敗: 0"));
 }
 
+/// YAMLファイルで失敗するテストケースが正しく処理されることをテスト
+///
+/// # テスト内容
+///
+/// - 成功するテストと失敗するテストを含むYAMLファイルを実行
+/// - 期待されるステータスコードと実際のステータスコードが異なるケースを検証
+///
+/// # 検証項目
+///
+/// - コマンドが異常終了すること（exit code 1）
+/// - 成功したテストに「✓ PASS」が表示されること
+/// - 失敗したテストに「✗ FAIL」が表示されること
+/// - テスト結果サマリーが正しいこと（合計2、成功1、失敗1）
 #[test]
 fn test_yaml_file_with_failing_test() {
+    // Arrange: 失敗するテストを含むYAMLファイルを作成
     let yaml_content = r#"
 name: "Failing Test Suite"
 base_url: "https://jsonplaceholder.typicode.com"
@@ -64,13 +104,13 @@ tests:
     let mut file = NamedTempFile::new().unwrap();
     write!(file, "{}", yaml_content).unwrap();
 
-    // コマンドの実行
+    // Act: コマンドの実行
     let output = Command::new("cargo")
         .args(&["run", "--", "-t", file.path().to_str().unwrap()])
         .output()
         .expect("Failed to execute command");
 
-    // 結果の検証
+    // Assert: 結果の検証
     let stdout = String::from_utf8_lossy(&output.stdout);
 
     // 失敗したテストがある場合、exitコードは1
@@ -80,8 +120,21 @@ tests:
     assert!(stdout.contains("合計: 2 / 成功: 1 / 失敗: 1"));
 }
 
+/// Verboseモード（-v）が正しく動作することをテスト
+///
+/// # テスト内容
+///
+/// - -vオプションを指定してYAMLテストを実行
+/// - 詳細なレスポンス情報が表示されることを確認
+///
+/// # 検証項目
+///
+/// - コマンドが正常終了すること
+/// - 標準出力に「Status Code: 200」が含まれること
+/// - 詳細なレスポンス情報が表示されること
 #[test]
 fn test_yaml_file_verbose_mode() {
+    // Arrange: Verboseモード用のYAMLファイルを作成
     let yaml_content = r#"
 name: "Verbose Mode Test"
 base_url: "https://jsonplaceholder.typicode.com"
@@ -97,21 +150,33 @@ tests:
     let mut file = NamedTempFile::new().unwrap();
     write!(file, "{}", yaml_content).unwrap();
 
-    // コマンドの実行（verboseモード）
+    // Act: コマンドの実行（verboseモード）
     let output = Command::new("cargo")
         .args(&["run", "--", "-t", file.path().to_str().unwrap(), "-v"])
         .output()
         .expect("Failed to execute command");
 
-    // 結果の検証
+    // Assert: 結果の検証
     let stdout = String::from_utf8_lossy(&output.stdout);
 
     assert!(output.status.success());
     assert!(stdout.contains("Status Code: 200"));
 }
 
+/// YAMLファイルにbase_urlが指定されていない場合のエラー処理をテスト
+///
+/// # テスト内容
+///
+/// - base_urlフィールドが欠けているYAMLファイルを実行
+/// - 適切なエラーメッセージが表示されることを確認
+///
+/// # 検証項目
+///
+/// - コマンドが異常終了すること
+/// - 標準エラー出力に「ベースURLが指定されていません」が含まれること
 #[test]
 fn test_yaml_file_without_base_url() {
+    // Arrange: base_urlが欠けているYAMLファイルを作成
     let yaml_content = r#"
 name: "No Base URL Test"
 tests:
@@ -126,21 +191,34 @@ tests:
     let mut file = NamedTempFile::new().unwrap();
     write!(file, "{}", yaml_content).unwrap();
 
-    // コマンドの実行
+    // Act: コマンドの実行
     let output = Command::new("cargo")
         .args(&["run", "--", "-t", file.path().to_str().unwrap()])
         .output()
         .expect("Failed to execute command");
 
-    // ベースURLがない場合はエラーになる
+    // Assert: ベースURLがない場合はエラーになる
     let stderr = String::from_utf8_lossy(&output.stderr);
 
     assert!(!output.status.success());
     assert!(stderr.contains("ベースURLが指定されていません"));
 }
 
+/// コマンドライン引数でbase_urlを上書きできることをテスト
+///
+/// # テスト内容
+///
+/// - YAMLファイルに定義されたbase_urlをCLI引数で上書き
+/// - --base-urlオプションが優先されることを確認
+///
+/// # 検証項目
+///
+/// - コマンドが正常終了すること
+/// - 上書きされたbase_url（jsonplaceholder）でリクエストが成功すること
+/// - テストがPASSすること
 #[test]
 fn test_yaml_file_with_cli_base_url_override() {
+    // Arrange: example.comをbase_urlとして定義（到達不可）
     let yaml_content = r#"
 name: "Base URL Override Test"
 base_url: "https://example.com"
@@ -156,7 +234,7 @@ tests:
     let mut file = NamedTempFile::new().unwrap();
     write!(file, "{}", yaml_content).unwrap();
 
-    // コマンドライン引数でベースURLを上書き
+    // Act: コマンドライン引数でベースURLを上書き
     let output = Command::new("cargo")
         .args(&[
             "run",
@@ -169,15 +247,30 @@ tests:
         .output()
         .expect("Failed to execute command");
 
-    // jsonplaceholder.typicode.comに向けてリクエストが送られるので成功する
+    // Assert: jsonplaceholder.typicode.comに向けてリクエストが送られるので成功する
     let stdout = String::from_utf8_lossy(&output.stdout);
 
     assert!(output.status.success());
     assert!(stdout.contains("✓ PASS Override Test"));
 }
 
+/// POSTメソッドのYAMLテストが正しく実行されることをテスト
+///
+/// # テスト内容
+///
+/// - POSTリクエストを含むYAMLテストファイルを実行
+/// - JSON形式のリクエストボディを送信
+/// - JSONPlaceholder APIに新規記事を作成
+///
+/// # 検証項目
+///
+/// - コマンドが正常終了すること
+/// - テストがPASSすること
+/// - ステータスコード201が正しく検証されること
+/// - テスト結果サマリーが正しいこと（合計1、成功1、失敗0）
 #[test]
 fn test_yaml_file_post_request() {
+    // Arrange: POSTリクエストを含むYAMLファイルを作成
     let yaml_content = r#"
 name: "POST Method Test"
 description: "Test POST requests"
@@ -200,13 +293,13 @@ tests:
     let mut file = NamedTempFile::new().unwrap();
     write!(file, "{}", yaml_content).unwrap();
 
-    // コマンドの実行
+    // Act: コマンドの実行
     let output = Command::new("cargo")
         .args(&["run", "--", "-t", file.path().to_str().unwrap()])
         .output()
         .expect("Failed to execute command");
 
-    // 結果の検証
+    // Assert: 結果の検証
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
 
