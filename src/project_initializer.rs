@@ -54,38 +54,43 @@ pub fn initialize_project() -> Result<()> {
 pub fn initialize_project_at(base_path: &Path) -> Result<()> {
     let project_path = base_path.join(PROJECT_DIR);
 
-    // ディレクトリが既に存在する場合はエラー
-    validate_project_directory(&project_path)?;
+    // プロジェクトディレクトリを作成（既存チェックも兼ねる）
+    match fs::create_dir(&project_path) {
+        Ok(_) => {}
+        Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {
+            return Err(anyhow!(
+                "ディレクトリ '{}' は既に存在します。\n\n解決方法:\n  1. 別のディレクトリに移動: cd ../other_project\n  2. 既存ディレクトリを削除: rm -rf {} (注意: データが失われます)\n  3. 既存ディレクトリを使用: rapid_probe -t {}/tests/example.yaml",
+                PROJECT_DIR, PROJECT_DIR, PROJECT_DIR
+            ));
+        }
+        Err(e) => {
+            return Err(e).context(format!(
+                "ディレクトリ '{}' の作成に失敗しました",
+                PROJECT_DIR
+            ))
+        }
+    }
 
     println!("Rapid Probe プロジェクトを初期化しています...\n");
+    println!("✓ ディレクトリを作成: {}/", PROJECT_DIR);
 
-    // プロジェクト構造の作成
-    create_directories(&project_path)?;
-    create_files(&project_path)?;
+    // サブディレクトリとファイルの作成（失敗時はロールバック）
+    if let Err(e) = create_subdirs_and_files(&project_path) {
+        // クリーンアップ: 部分的に作成されたディレクトリ構造を削除
+        let _ = fs::remove_dir_all(&project_path);
+        return Err(e);
+    }
 
     print_success_message();
 
     Ok(())
 }
 
-/// プロジェクトディレクトリの存在チェック
-fn validate_project_directory(project_path: &Path) -> Result<()> {
-    if project_path.exists() {
-        return Err(anyhow!(
-            "ディレクトリ '{}' は既に存在します。\n別のディレクトリで実行するか、既存のディレクトリを削除してください。",
-            PROJECT_DIR
-        ));
-    }
-    Ok(())
-}
-
-/// ディレクトリ構造の作成
-fn create_directories(project_path: &Path) -> Result<()> {
-    // プロジェクトディレクトリの作成
-    fs::create_dir(project_path)
-        .with_context(|| format!("ディレクトリ '{}' の作成に失敗しました", PROJECT_DIR))?;
-    println!("✓ ディレクトリを作成: {}/", PROJECT_DIR);
-
+/// サブディレクトリとファイルの作成
+///
+/// testsディレクトリとテンプレートファイル（config.yaml, example.yaml）を作成します。
+/// エラーが発生した場合、呼び出し側でクリーンアップが必要です。
+fn create_subdirs_and_files(project_path: &Path) -> Result<()> {
     // testsディレクトリの作成
     let tests_path = project_path.join(TESTS_DIR);
     fs::create_dir(&tests_path).with_context(|| {
@@ -96,11 +101,6 @@ fn create_directories(project_path: &Path) -> Result<()> {
     })?;
     println!("✓ ディレクトリを作成: {}/{}/", PROJECT_DIR, TESTS_DIR);
 
-    Ok(())
-}
-
-/// テンプレートファイルの作成
-fn create_files(project_path: &Path) -> Result<()> {
     // config.yamlの作成
     create_config_file(project_path)?;
 
@@ -207,9 +207,17 @@ mod tests {
 
     #[test]
     fn test_template_files_are_embedded() {
-        // テンプレートファイルが埋め込まれていること
-        assert!(!CONFIG_TEMPLATE.is_empty());
-        assert!(!EXAMPLE_TEST_TEMPLATE.is_empty());
+        // テンプレートファイルが埋め込まれていること（最小サイズをチェック）
+        assert!(
+            CONFIG_TEMPLATE.len() > 100,
+            "Config template seems too short: {} bytes",
+            CONFIG_TEMPLATE.len()
+        );
+        assert!(
+            EXAMPLE_TEST_TEMPLATE.len() > 100,
+            "Example template seems too short: {} bytes",
+            EXAMPLE_TEST_TEMPLATE.len()
+        );
 
         // テンプレートに期待される内容が含まれていること
         assert!(CONFIG_TEMPLATE.contains("base_url"));
@@ -221,5 +229,70 @@ mod tests {
         assert!(EXAMPLE_TEST_TEMPLATE.contains("tests:"));
         assert!(EXAMPLE_TEST_TEMPLATE.contains("GET"));
         assert!(EXAMPLE_TEST_TEMPLATE.contains("POST"));
+    }
+
+    #[test]
+    fn test_created_files_contain_correct_content() {
+        // Arrange: 一時ディレクトリを作成
+        let temp_dir = TempDir::new().unwrap();
+
+        // Act: プロジェクトを初期化
+        initialize_project_at(temp_dir.path()).unwrap();
+
+        // Assert: ファイルの内容が正しいこと
+        let project_path = temp_dir.path().join(PROJECT_DIR);
+
+        // config.yamlの内容を検証
+        let config_content = fs::read_to_string(project_path.join(CONFIG_FILE)).unwrap();
+        assert_eq!(
+            config_content, CONFIG_TEMPLATE,
+            "config.yaml content should match template"
+        );
+
+        // example.yamlの内容を検証
+        let example_content =
+            fs::read_to_string(project_path.join(TESTS_DIR).join(EXAMPLE_TEST_FILE)).unwrap();
+        assert_eq!(
+            example_content, EXAMPLE_TEST_TEMPLATE,
+            "example.yaml content should match template"
+        );
+    }
+
+    #[test]
+    fn test_initialize_with_unicode_base_path() {
+        // Arrange: Unicode文字（日本語）を含むパスを作成
+        let temp_dir = TempDir::new().unwrap();
+        let unicode_path = temp_dir.path().join("テスト日本語");
+        fs::create_dir(&unicode_path).unwrap();
+
+        // Act: プロジェクトを初期化
+        let result = initialize_project_at(&unicode_path);
+
+        // Assert: 成功すること
+        assert!(result.is_ok(), "Should handle Unicode paths correctly");
+
+        let project_path = unicode_path.join(PROJECT_DIR);
+        assert!(project_path.exists());
+        assert!(project_path.join(TESTS_DIR).exists());
+        assert!(project_path.join(CONFIG_FILE).exists());
+    }
+
+    #[test]
+    fn test_initialize_with_spaces_in_path() {
+        // Arrange: スペースを含むパスを作成
+        let temp_dir = TempDir::new().unwrap();
+        let space_path = temp_dir.path().join("my projects");
+        fs::create_dir(&space_path).unwrap();
+
+        // Act: プロジェクトを初期化
+        let result = initialize_project_at(&space_path);
+
+        // Assert: 成功すること
+        assert!(result.is_ok(), "Should handle paths with spaces correctly");
+
+        let project_path = space_path.join(PROJECT_DIR);
+        assert!(project_path.exists());
+        assert!(project_path.join(TESTS_DIR).exists());
+        assert!(project_path.join(CONFIG_FILE).exists());
     }
 }
